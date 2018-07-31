@@ -1,7 +1,11 @@
 #!/usr/bin/env python
-import urlparse
-import pkg_resources  # part of setuptools
+from future.standard_library import install_aliases
+install_aliases()
+
+from future.utils import itervalues
+from urllib.parse import urlsplit
 import urllib
+import pkg_resources  # part of setuptools
 import json
 import time
 import sys
@@ -11,7 +15,6 @@ import logging
 import schema_salad.ref_resolver
 import requests
 from requests.exceptions import InvalidSchema, MissingSchema
-from wes_service.util import visit
 from bravado.client import SwaggerClient
 from bravado.requests_client import RequestsClient
 
@@ -52,7 +55,7 @@ def main(argv=sys.argv[1:]):
         exit(0)
 
     http_client = RequestsClient()
-    split = urlparse.urlsplit("%s://%s/" % (args.proto, args.host))
+    split = urlsplit("%s://%s/" % (args.proto, args.host))
 
     http_client.set_api_key(
         split.hostname, args.auth,
@@ -96,7 +99,7 @@ def main(argv=sys.argv[1:]):
         "location": {"@type": "@id"},
         "path": {"@type": "@id"}
     })
-    input_dict, _ = loader.resolve_ref(args.job_order)
+    input_dict, _ = loader.resolve_ref(args.job_order, checklinks=False)
 
     basedir = os.path.dirname(args.job_order)
 
@@ -186,6 +189,16 @@ def main(argv=sys.argv[1:]):
     else:
         return 1
 
+# Copied from wes_service.util to avoid import dependencies
+def visit(d, op):
+    """Recursively call op(d) for all list subelements and dictionary 'values' that d may have."""
+    op(d)
+    if isinstance(d, list):
+        for i in d:
+            visit(i, op)
+    elif isinstance(d, dict):
+        for i in itervalues(d):
+            visit(i, op)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
